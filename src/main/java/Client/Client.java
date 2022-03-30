@@ -2,7 +2,7 @@ package Client;
 
 import java.rmi.RemoteException;
 import Task.Task;
-import Task.Result;
+
 
 /**
  * On startup, login to the Coordinator.
@@ -12,5 +12,5 @@ import Task.Result;
 public interface Client {
     public boolean isBusy() throws RemoteException;
 
-    public Result work(Task task) throws RemoteException;
+    public Task work(Task task) throws RemoteException;
 }
