@@ -10,9 +10,25 @@ import java.util.List;
  * Spawns an RMI registry
  */
 public interface Coordinator {
-//    List<Client> clients;
 
+    /**
+     * Poll the list of registered clients, returning a list of those ready for work
+     * @return list of clients available for scheduling work on
+     * @throws RemoteException rmi
+     */
     public List<Client> availableWorkers() throws RemoteException;
+
+    /**
+     * Clients can call this function to register with the Coordinator
+     * @return true if successfully registered, false otherwise
+     * @throws RemoteException rmi
+     */
     public boolean login() throws RemoteException;
+
+    /**
+     * Clients can call this function to de-register with the Coordinator, to prevent further scheduling of work
+     * @return true if successfully removed from worker pool, false otherwise
+     * @throws RemoteException rmi
+     */
     public boolean logout() throws RemoteException;
 }
