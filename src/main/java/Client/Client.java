@@ -2,6 +2,7 @@ package Client;
 
 import java.rmi.RemoteException;
 import Task.Task;
+import Task.Result;
 
 /**
  * On startup, login to the Coordinator.
@@ -9,9 +10,7 @@ import Task.Task;
  * Can accept a task to work on it
  */
 public interface Client {
-//    State status = State.IDLE;
-
     public boolean isBusy() throws RemoteException;
 
-    public boolean work(Task task) throws RemoteException;
+    public Result work(Task task) throws RemoteException;
 }
