@@ -6,7 +6,8 @@ import java.rmi.RemoteException;
 import java.util.List;
 
 /**
- * Coordinator keeps a list of available clients,
+ * Coordinator keeps a list of available clients, and interface for clients to login and logout sessions.
+ * Spawns an RMI registry
  */
 public interface Coordinator {
 //    List<Client> clients;

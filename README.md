@@ -3,3 +3,13 @@
 by: Nick Osborn, Riley Grant, Soma Badri
 
 More info here
+
+## Fault Tolerance
+
+Coordinator
+ - failure: elect a new coordinator? from running clients
+ - write checkpoints of logged in clients
+Requesting client failure
+ - job is aborted?
+Worker failure
+ - Manager reschedules work 
