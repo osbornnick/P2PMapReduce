@@ -1,6 +1,6 @@
-package Coordinator;
+package coordinator;
 
-import Client.Client;
+import client.Client;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -10,7 +10,7 @@ import java.util.List;
  * Coordinator keeps a list of available clients, and interface for clients to login and logout sessions.
  * Spawns an RMI registry
  */
-public interface CoordinatorRemote extends Remote {
+public interface Coordinator extends Remote {
 
 
     /**

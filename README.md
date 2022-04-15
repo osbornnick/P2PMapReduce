@@ -6,7 +6,7 @@ More info here
 
 ## Fault Tolerance
 
-Coordinator
+coordinator
  - failure: elect a new coordinator? from running clients
  - write checkpoints of logged in clients
 Requesting client failure

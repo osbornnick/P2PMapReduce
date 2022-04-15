@@ -1,7 +1,7 @@
-package Coordinator;
+package coordinator;
 
-import Client.Client;
-import Utility.Logger;
+import client.Client;
+import utility.Logger;
 
 import java.net.MalformedURLException;
 import java.rmi.Naming;
@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  *
  */
-public class CoordinatorRemoteImpl extends UnicastRemoteObject implements CoordinatorRemote {
+public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator {
     private String coordName;
     private Logger logger;
     private Map<String, Client> connectedClients;
@@ -25,7 +25,7 @@ public class CoordinatorRemoteImpl extends UnicastRemoteObject implements Coordi
      *
      * @param coordName
      */
-    public CoordinatorRemoteImpl(String coordName, Logger logger) throws RemoteException {
+    public CoordinatorImpl(String coordName, Logger logger) throws RemoteException {
         this.coordName = coordName;
         this.logger = logger;
         this.connectedClients = new HashMap<String, Client>();
@@ -76,7 +76,9 @@ public class CoordinatorRemoteImpl extends UnicastRemoteObject implements Coordi
     public List<Client> availableWorkers(String clientName) throws RemoteException {
         List<Client> availableClients = new ArrayList<Client>();
         for ( Client c : connectedClients.values() ) {
-            // ping it, if not busy, add it to the list
+            if ( !c.isBusy() ) {
+                availableClients.add( c );
+            }
         }
         return availableClients;
     }
