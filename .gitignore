@@ -1,5 +1,10 @@
 .idea
 
+# project specific
+# make sure logs directory exists, but don't add all logs
+logs/*.txt
+
+
 # java
 .mtj.tmp/
 *.class
