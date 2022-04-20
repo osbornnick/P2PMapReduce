@@ -1,7 +1,8 @@
-package Client;
+package client;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
-import Task.Task;
+import task.Task;
 
 
 /**
@@ -9,7 +10,10 @@ import Task.Task;
  * Can request work to be scheduled
  * Can accept a task to work on it
  */
-public interface Client {
+public interface Client extends Remote {
+
+    public boolean connectToCoord() throws RemoteException;
+
     public boolean isBusy() throws RemoteException;
 
     public Task work(Task task) throws RemoteException;
