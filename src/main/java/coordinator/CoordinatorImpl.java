@@ -1,7 +1,7 @@
 package coordinator;
 
 import client.Client;
-import utility.Logger;
+import logging.Logger;
 
 import java.net.MalformedURLException;
 import java.rmi.Naming;
@@ -28,53 +28,39 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
     public CoordinatorImpl(String coordName, Logger logger) throws RemoteException {
         this.coordName = coordName;
         this.logger = logger;
-        this.connectedClients = new HashMap<String, Client>();
+        this.connectedClients = new HashMap<>();
     }
 
 
     @Override
-    public boolean login(String clientName) throws RemoteException {
+    public boolean login(String clientName, UnicastRemoteObject stub) throws RemoteException {
 
-        this.logger.printAndLog("Client with name: '" + clientName + " connected.");
+        this.logger.log("Client with name: '%s' connected", clientName);
 
         if ( !this.connectedClients.containsKey( clientName )) {
-            try {
-                Client newClient = (Client) Naming.lookup("rmi://localhost/" + clientName);
-                this.connectedClients.put( clientName, newClient );
-                this.logger.printAndLog("Clients now connected are: " + this.connectedClients.keySet());
-            } catch (NotBoundException e) {
-                // todo: make error messages better, log them
-                e.printStackTrace();
-                return false;
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-                return false;
-            }
+            this.connectedClients.put( clientName, (Client) stub );
+            this.logger.log("Clients now connected are: %s", this.connectedClients.keySet());
         }
         return true;
     }
 
-
     @Override
     public boolean logout(String clientName) throws RemoteException {
 
-        this.logger.printAndLog("Client with name: '" + clientName + " disconnected.");
+        this.logger.log("Client with name: '%s' disconnected", clientName);
 
         if ( this.connectedClients.containsKey( clientName )) {
             this.connectedClients.remove( clientName );
-            this.logger.printAndLog("Clients now connected are: " + this.connectedClients.keySet());
+            this.logger.log("Clients now connected are: " + this.connectedClients.keySet());
             return true;
         }
 
         return false;
     }
 
-
-
-
     @Override
     public List<Client> availableWorkers(String clientName) throws RemoteException {
-        List<Client> availableClients = new ArrayList<Client>();
+        List<Client> availableClients = new ArrayList<>();
         for ( Client c : connectedClients.values() ) {
             if ( !c.isBusy() ) {
                 availableClients.add( c );
@@ -82,6 +68,5 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
         }
         return availableClients;
     }
-
 
 }

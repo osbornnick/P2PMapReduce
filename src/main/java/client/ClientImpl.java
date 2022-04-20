@@ -2,50 +2,52 @@ package client;
 
 import coordinator.Coordinator;
 import task.Task;
-import utility.Logger;
+import logging.Logger;
 
+import java.io.Reader;
 import java.net.MalformedURLException;
+import java.nio.Buffer;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class ClientImpl extends UnicastRemoteObject implements Client {
+public class ClientImpl extends UnicastRemoteObject implements Client, Worker {
     private State status;
     private String clientName;
     private Logger logger;
-    private Coordinator coord;
+    private Coordinator coordinator;
+    public Buffer buffer;
 
-    public ClientImpl(String clientName, Logger logger) throws RemoteException {
-        this.status = State.IDLE;
-        this.clientName = clientName;
-        this.logger = logger;
-        this.coord = null;
+    public static void main(String[] args) {
+        // args: name hostname port
+        if (args.length != 3) {
+            System.out.println("no");
+        }
+        String clientName = args[0];
     }
 
-
-    // private helper to connect to the coordinator when this client starts up
-    public boolean connectToCoord() {
-        String coordName = "coord";
+    public ClientImpl(String clientName, String hostname, int port) throws RemoteException{
+        this.status = State.IDLE;
+        this.clientName = clientName;
+        this.logger = new Logger(clientName);
+        Registry reg = null;
+        UnicastRemoteObject stub = null;
         try {
-            this.coord = (Coordinator) Naming.lookup("rmi://" + "localhost" + "/" + coordName);
-            this.logger.printAndLog("Connected to Coordinator with RMI name: " + coordName);
-            this.coord.login( this.clientName );
-            return true;
-        } catch (MalformedURLException e) {
-            this.logger.printAndLog("Error! Could not connect to: " + "rmi://" + "localhost" + "/" + coordName);
-            this.logger.printAndLog("Error message: " + e.getMessage());
-            e.printStackTrace();
-        } catch (NotBoundException e) {
-            this.logger.printAndLog("Error! Coordinator with name: " + coordName + " not bound!");
-            this.logger.printAndLog("Error message: " + e.getMessage());
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            this.logger.printAndLog("Error! RMI failed");
-            this.logger.printAndLog("Error message: " + e.getMessage());
+            reg = LocateRegistry.getRegistry(hostname, port);
+            stub = (UnicastRemoteObject) UnicastRemoteObject.exportObject(this, 0);
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        return false;
+        try {
+            this.coordinator = (Coordinator) reg.lookup("coord");
+            this.coordinator.login(clientName, stub);
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
+
     }
 
 
@@ -55,8 +57,11 @@ public class ClientImpl extends UnicastRemoteObject implements Client {
     }
 
     @Override
-    public Task work(Task task) throws RemoteException {
-        // todo:
-        return null;
+    public boolean runTask(Task task, Reader reader) throws RemoteException {
+        this.status = State.BUSY; // maybe? maybe can do multiple units of work;
+        task.setInputData(reader);
+        task.run();
+        this.status = State.IDLE;
+        return task.isComplete();
     }
 }

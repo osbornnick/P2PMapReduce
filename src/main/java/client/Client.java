@@ -2,7 +2,6 @@ package client;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import task.Task;
 
 
 /**
@@ -12,9 +11,5 @@ import task.Task;
  */
 public interface Client extends Remote {
 
-    public boolean connectToCoord() throws RemoteException;
-
     public boolean isBusy() throws RemoteException;
-
-    public Task work(Task task) throws RemoteException;
 }

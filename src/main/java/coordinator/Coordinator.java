@@ -4,6 +4,7 @@ import client.Client;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
 /**
@@ -18,7 +19,7 @@ public interface Coordinator extends Remote {
      * @return true if successfully registered, false otherwise
      * @throws RemoteException rmi
      */
-    boolean login(String clientName) throws RemoteException;
+    boolean login(String clientName, UnicastRemoteObject stub) throws RemoteException;
 
     /**
      * Clients can call this function to de-register with the Coordinator, to prevent further scheduling of work
