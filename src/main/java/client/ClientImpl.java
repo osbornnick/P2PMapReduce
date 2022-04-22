@@ -1,13 +1,14 @@
 package client;
 
+import com.healthmarketscience.rmiio.RemoteIterator;
+import jobManager.JobManager;
 import coordinator.Coordinator;
+import jobManager.JobManagerImpl;
 import task.Task;
 import logging.Logger;
 
-import java.io.Reader;
-import java.net.MalformedURLException;
+import java.io.InputStream;
 import java.nio.Buffer;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -27,9 +28,17 @@ public class ClientImpl extends UnicastRemoteObject implements Client, Worker {
             System.out.println("no");
         }
         String clientName = args[0];
+        String hostname = args[1];
+        int port = Integer.parseInt(args[2]);
+
+        try {
+            ClientImpl client = new ClientImpl(clientName, hostname, port);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
-    public ClientImpl(String clientName, String hostname, int port) throws RemoteException{
+    public ClientImpl(String clientName, String hostname, int port) throws RemoteException {
         this.status = State.IDLE;
         this.clientName = clientName;
         this.logger = new Logger(clientName);
@@ -47,7 +56,6 @@ public class ClientImpl extends UnicastRemoteObject implements Client, Worker {
         } catch (NotBoundException e) {
             e.printStackTrace();
         }
-
     }
 
 
@@ -57,11 +65,23 @@ public class ClientImpl extends UnicastRemoteObject implements Client, Worker {
     }
 
     @Override
-    public boolean runTask(Task task, Reader reader) throws RemoteException {
+    public boolean runTask(Task task, RemoteIterator<String> inputIterator) throws RemoteException {
+        // maybe even a remote stream
+
         this.status = State.BUSY; // maybe? maybe can do multiple units of work;
-        task.setInputData(reader);
+        task.setInputData(inputIterator);
         task.run();
         this.status = State.IDLE;
         return task.isComplete();
+    }
+
+    @Override
+    public boolean mapReduce(Task map, Task reduce, String[] dataFiles, int reducers) {
+        // ping coordinator for a list of workers
+        // give those workers to the job manager
+        // split data into M iterators (where M is the number of map workers)
+//        JobManager manager = new JobManagerImpl(Task map, Task reduce, String[] dataFiles, int reducers);
+
+        return false;
     }
 }

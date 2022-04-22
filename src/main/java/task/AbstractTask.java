@@ -1,19 +1,20 @@
 package task;
 
-import java.io.Reader;
-import java.io.Writer;
+import com.healthmarketscience.rmiio.RemoteIterator;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 public abstract class AbstractTask implements Task {
-    protected Reader input;
-    protected Writer output;
+    protected RemoteIterator<String> iterator;
+    protected OutputStream output;
 
     @Override
-    public void setInputData(Reader reader) {
-        this.input = reader;
+    public void setInputData(RemoteIterator<String> iterator) {
+        this.iterator = iterator;
     }
 
     @Override
-    public void setOutputData(Writer writer) {
+    public void setOutputData(OutputStream writer) {
         this.output = writer;
     }
 }
