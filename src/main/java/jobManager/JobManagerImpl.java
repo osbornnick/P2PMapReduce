@@ -2,36 +2,299 @@
 package jobManager;
 
 import client.Worker;
+import com.healthmarketscience.rmiio.RemoteIterator;
 import task.Task;
+import util.CombineRemoteIterator;
+import util.Logger;
+import util.RemoteFileIterator;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.Reader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import com.healthmarketscience.rmiio.RemoteInputStream;
-import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
-public class JobManagerImpl {
+public class JobManagerImpl implements JobManager {
     Task map;
     Task reduce;
-    List<Reader> data;
-    List<Worker> workers;
+    Map<String, Worker> workers;
     int reducers;
+    List<Assignment> mapAssignments = new ArrayList<>();
+    List<Assignment> reduceAssignments = new ArrayList<>();
+    List<File> chunks;
+    List<File> outputFiles;
+    InputStream[] inputStreams;
+    UUID uid;
+    String clientName;
+    Logger logger;
 
-    JobManagerImpl(Task map, Task reduce, String[] localDataLocations, List<Worker> workers, int reducers) {
+    public JobManagerImpl(String associatedClient, Task map, Task reduce, InputStream[] inputStreams, Map<String, Worker> workers, int reducers) {
+        this.clientName = associatedClient;
+        this.logger = new Logger(String.format("JobManager_%s", associatedClient));
+        this.uid = UUID.randomUUID();
         this.map = map;
         this.reduce = reduce;
         this.workers = workers;
         this.reducers = reducers;
-        this.openFiles(localDataLocations);
+        this.inputStreams = inputStreams;
+        try {
+            this.generateChunks(inputStreams);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        this.outputFiles = new ArrayList<>();
+        File parent = new File("./output");
+        if (!parent.exists()) parent.mkdirs();
+        for (int i = 0; i < reducers; i++) {
+            File f = new File(String.format("./output/%s-%d.csv", uid.toString(), i));
+            try {
+                f.createNewFile();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            this.outputFiles.add(f);
+        }
     }
 
-    private void openFiles(String[] files) {
-        String f = files[0];
-        try {
-            RemoteInputStream ris = new SimpleRemoteInputStream(new FileInputStream(f));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+    @Override
+    public void run() {
+
+        // SPLIT DATA
+        // create chunks
+
+        // generate map assignments
+        AtomicInteger i = new AtomicInteger();
+
+        for (String s : workers.keySet()) {
+            Assignment a = null;
+            try {
+                DataGetter dg = () -> {
+                    try {
+                        return generateRemoteIterator(i.getAndIncrement());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+                a = new Assignment(workers.get(s), s, dg, this.map);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            this.mapAssignments.add(a);
+        }
+
+        logger.log("Map Assignments generated: %s", mapAssignments.toString());
+
+        List<Thread> mapThreads = new ArrayList<>();
+
+        // generate thread for each assignment
+        mapAssignments.forEach(a -> {
+            Thread t = new Thread(new workerThread(a));
+            t.start();
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            mapThreads.add(t);
+        });
+
+        // todo: reassignment of work
+
+        // map tasks have all finished at this point
+        logger.log("Map completed");
+
+        // REDUCE
+        HashMap<String, Worker> reduceWorkers = new HashMap<>();
+        List<String> reduceWorkerNames = new ArrayList<>();
+        int j = 0;
+        for (Map.Entry<String, Worker> entry : workers.entrySet()) {
+            if (j++ == reducers) break;
+            reduceWorkers.put(entry.getKey(), entry.getValue());
+            reduceWorkerNames.add(entry.getKey());
+        }
+
+        // make assignments
+        int k = 0;
+        for (Assignment mapAssignment : mapAssignments) {
+            int workerIndex = k % reducers;
+            String workerName = reduceWorkerNames.get(workerIndex);
+            Worker worker = reduceWorkers.get(workerName);
+            if (k >= reducers) {
+                Assignment a = reduceAssignments.get(workerIndex); // workerIndex should correspond to assignment index
+                RemoteIterator<String> prev = a.dataGetter.get();
+                a.dataGetter = () -> {
+                    try {
+                        return new CombineRemoteIterator<>(mapAssignment.worker.getComputedData(), prev);
+                    } catch (RemoteException e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+            } else {
+                DataGetter dg = () -> {
+                    try {
+                        return mapAssignment.worker.getComputedData();
+                    } catch (RemoteException e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+                Assignment reduceAssignment = new Assignment(worker, workerName, dg, this.reduce);
+                reduceAssignments.add(reduceAssignment);
+            }
+            k++;
+        }
+
+        List<Thread> reduceThreads = new ArrayList<>();
+
+        // do the reduce work
+        reduceAssignments.forEach(a -> {
+            Thread t = new Thread(new workerThread(a));
+            t.start();
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            reduceThreads.add(t);
+        });
+
+        // todo reassign work after super majority are finished?
+
+        // for each reduce assignment, get the outputData and stream to a file.
+        int l = 0;
+        for (Assignment a : reduceAssignments) {
+            RemoteIterator<String> data;
+            try {
+                data = a.worker.getComputedData();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+            File writeTo = outputFiles.get(l);
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(writeTo))) {
+                while (data.hasNext()) {
+                    writer.write(data.next());
+                    writer.newLine();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            l++;
+        }
+
+        // delete all intermediate data
+//        for (Assignment ma : mapAssignments) {
+//            try {
+//                ma.worker.taskCompleted(this.map);
+//            } catch (RemoteException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }
+//
+//        for (Assignment ra : reduceAssignments) {
+//            try {
+//                ra.worker.taskCompleted(this.reduce);
+//            } catch (RemoteException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }
+
+        // print out location of output data
+        System.out.println("MapReduce completed!!!");
+        System.out.println("find output in:");
+        this.outputFiles.forEach(f -> System.out.printf("%s%n", f.getPath()));
+    }
+
+    private static class workerThread implements Runnable {
+
+        Assignment a;
+
+        workerThread(Assignment assignment) {
+            this.a = assignment;
+        }
+
+        @Override
+        public void run() {
+            try {
+                a.worker.runTask(a.task, a.dataGetter.get());
+                a.isComplete = true;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private RemoteIterator<String> generateRemoteIterator(int nth) throws IOException {
+        File chunk = this.chunks.get(nth);
+        logger.log("Generating iterator for chunk %d from file %s", nth, chunk.getPath());
+        return RemoteFileIterator.iterator(chunk);
+    }
+
+    /**
+     * Generate M chunks of data for each map worker
+     *
+     * @param fileStreams data streams of input
+     * @throws IOException if can't write
+     */
+    private void generateChunks(InputStream[] fileStreams) throws IOException {
+        int totalWorkers = workers.size();
+        this.chunks = new ArrayList<>();
+        this.logger.log("Generating %d chunks", totalWorkers);
+        Iterator<String> iter = new Iterator<>() {
+            int streamIndex = 0;
+            Scanner scanner = new Scanner(fileStreams[streamIndex]);
+
+            @Override
+            public boolean hasNext() {
+                if (scanner.hasNextLine()) return true;
+                scanner.close();
+                if (streamIndex == fileStreams.length - 1) return false;
+                scanner = new Scanner(fileStreams[++streamIndex]);
+
+                return this.hasNext();
+            }
+
+            @Override
+            public String next() {
+                return scanner.nextLine();
+            }
+        };
+
+        for (int i = 0; i < totalWorkers; i++) {
+            File f = new File(String.format("./chunk-%s.csv", i));
+            f.createNewFile();
+            chunks.add(f);
+        }
+
+        List<PrintWriter> openChunks = chunks.stream().map(f -> {
+            try {
+                return new PrintWriter( new FileWriter(f));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+
+        int n = 0;
+        while (iter.hasNext()) {
+            String data = iter.next();
+            PrintWriter chunk = openChunks.get(n % totalWorkers);
+            chunk.println(data);
+            n++;
+        }
+
+        openChunks.forEach(fw -> fw.close());
+        logger.log("Chunks generated: ");
+        for (File f : chunks) {
+            logger.log("%-20s", f.getPath());
         }
     }
 }

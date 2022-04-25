@@ -1,4 +1,4 @@
-package logging;
+package util;
 
 import java.io.File;
 import java.io.IOException;

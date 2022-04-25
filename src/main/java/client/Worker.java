@@ -3,7 +3,6 @@ package client;
 import com.healthmarketscience.rmiio.RemoteIterator;
 import task.Task;
 
-import java.io.InputStream;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -16,4 +15,8 @@ public interface Worker extends Remote {
      * @throws RemoteException if disconnects or fails
      */
     boolean runTask(Task task, RemoteIterator<String> remoteIterator) throws RemoteException;
+
+    RemoteIterator<String> getComputedData() throws RemoteException;
+
+    boolean taskCompleted(Task task) throws RemoteException;
 }

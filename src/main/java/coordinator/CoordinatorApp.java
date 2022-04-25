@@ -1,6 +1,6 @@
 package coordinator;
 
-import logging.Logger;
+import util.Logger;
 import java.io.IOException;
 import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;

@@ -1,11 +1,12 @@
 package coordinator;
 
 import client.Client;
+import client.Worker;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.List;
+import java.util.Map;
 
 /**
  * Coordinator keeps a list of available clients, and interface for clients to login and logout sessions.
@@ -19,7 +20,7 @@ public interface Coordinator extends Remote {
      * @return true if successfully registered, false otherwise
      * @throws RemoteException rmi
      */
-    boolean login(String clientName, UnicastRemoteObject stub) throws RemoteException;
+    boolean login(String clientName, Client stub) throws RemoteException;
 
     /**
      * Clients can call this function to de-register with the Coordinator, to prevent further scheduling of work
@@ -34,7 +35,7 @@ public interface Coordinator extends Remote {
      * @return list of clients available for scheduling work on
      * @throws RemoteException rmi
      */
-    List<Client> availableWorkers(String clientName) throws RemoteException;
+    Map<String, Worker> availableWorkers(String clientName) throws RemoteException;
 
 
 

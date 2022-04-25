@@ -1,11 +1,9 @@
 package coordinator;
 
 import client.Client;
-import logging.Logger;
+import client.Worker;
+import util.Logger;
 
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -21,6 +19,7 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
     private Logger logger;
     private Map<String, Client> connectedClients;
 
+    // todo poll and remove clients from connected clients map
     /**
      *
      * @param coordName
@@ -33,12 +32,12 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
 
 
     @Override
-    public boolean login(String clientName, UnicastRemoteObject stub) throws RemoteException {
+    public boolean login(String clientName, Client stub) throws RemoteException {
 
         this.logger.log("Client with name: '%s' connected", clientName);
 
         if ( !this.connectedClients.containsKey( clientName )) {
-            this.connectedClients.put( clientName, (Client) stub );
+            this.connectedClients.put( clientName, stub );
             this.logger.log("Clients now connected are: %s", this.connectedClients.keySet());
         }
         return true;
@@ -59,11 +58,12 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
     }
 
     @Override
-    public List<Client> availableWorkers(String clientName) throws RemoteException {
-        List<Client> availableClients = new ArrayList<>();
-        for ( Client c : connectedClients.values() ) {
+    public Map<String, Worker> availableWorkers(String clientName) throws RemoteException {
+        Map<String, Worker> availableClients = new HashMap<>();
+        for ( String cName : connectedClients.keySet() ) {
+            Client c = connectedClients.get(cName);
             if ( !c.isBusy() ) {
-                availableClients.add( c );
+                availableClients.put( cName, (Worker) c );
             }
         }
         return availableClients;
