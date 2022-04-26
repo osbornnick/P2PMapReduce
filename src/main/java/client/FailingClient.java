@@ -1,12 +1,14 @@
 package client;
 
+import com.healthmarketscience.rmiio.RemoteIterator;
 import coordinator.Coordinator;
 import task.Task;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.rmi.RemoteException;
 
-public class FailingClient extends AbstractClient {
+public class FailingClient extends AbstractClient implements Worker {
 
     public static void main(String[] args) {
         if (args.length != 2) {
@@ -31,9 +33,8 @@ public class FailingClient extends AbstractClient {
 
     @Override
     public boolean isBusy() throws RemoteException {
-        while (true) {
-            // hehe
-        }
+//        while (true) {}
+        return false;
     }
 
     @Override
@@ -43,9 +44,31 @@ public class FailingClient extends AbstractClient {
 
     @Override
     public boolean isAlive() throws RemoteException {
+//        while (true) {}
         return true;
-//        while (true) {
-//            // hehe
-//        }
+    }
+
+    @Override
+    public boolean runTask(Task task, RemoteIterator<String> remoteIterator) throws RemoteException {
+        int i = 0;
+        try {
+            while (remoteIterator.hasNext() && i < 100) {
+                remoteIterator.next();
+                i++;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        while (true) {}
+    }
+
+    @Override
+    public RemoteIterator<String> getComputedData() throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public boolean taskCompleted(Task task) throws RemoteException {
+        return false;
     }
 }
