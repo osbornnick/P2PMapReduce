@@ -4,13 +4,10 @@ import coordinator.Coordinator;
 import task.Task;
 
 import java.io.InputStream;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 
-public class NormalClient implements Client {
+
+public class NormalClient extends AbstractClient {
     public static void main(String[] args) {
         if (args.length != 2) {
             System.out.println("Usage: java -jar <hostname> <port>");
@@ -24,22 +21,7 @@ public class NormalClient implements Client {
     Coordinator coordinator;
 
     NormalClient(String hostname, int port) {
-        String clientName = "normal client";
-        Registry reg = null;
-        Client stub = null;
-        try {
-            reg = LocateRegistry.getRegistry(hostname, port);
-            stub = (Client) UnicastRemoteObject.exportObject(this, 0);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            this.coordinator = (Coordinator) reg.lookup("coord");
-            this.coordinator.login(clientName, stub);
-        } catch (NotBoundException | RemoteException e) {
-            e.printStackTrace();
-        }
-
+        super("normal client", hostname, port);
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {

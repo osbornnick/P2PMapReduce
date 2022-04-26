@@ -3,36 +3,22 @@ package client;
 import WordCountExample.WCMapTask;
 import WordCountExample.WCReduceTask;
 import com.healthmarketscience.rmiio.RemoteIterator;
-import coordinator.Coordinator;
-import jobManager.JobManager;
 import jobManager.JobManagerImpl;
 import task.Task;
-import util.Logger;
 import util.RemoteFileIterator;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ClientImpl implements Client, Worker {
-    private State status;
-    private String clientName;
-    private Logger logger;
-    private Coordinator coordinator;
+public class ClientImpl extends AbstractClient implements Worker {
     public Path computedData;
 
-    private Map<Task, Path> taskStorage;
+    private final Map<Task, Path> taskStorage;
 
     public static void main(String[] args) {
         // args: name hostname port
@@ -60,30 +46,8 @@ public class ClientImpl implements Client, Worker {
     }
 
     public ClientImpl(String clientName, String hostname, int port) {
-        this.logger = new Logger(clientName);
-        this.setState(State.IDLE);
-        this.clientName = clientName;
-        Registry reg = null;
-        Client stub = null;
-        try {
-            reg = LocateRegistry.getRegistry(hostname, port);
-            stub = (Client) UnicastRemoteObject.exportObject(this, 0);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            this.coordinator = (Coordinator) reg.lookup("coord");
-            this.coordinator.login(clientName, stub);
-        } catch (NotBoundException | RemoteException e) {
-            e.printStackTrace();
-        }
+        super(clientName, hostname, port);
         taskStorage = new HashMap<>();
-    }
-
-
-    @Override
-    public boolean isBusy() throws RemoteException {
-        return this.status == State.BUSY;
     }
 
     @Override
@@ -93,14 +57,14 @@ public class ClientImpl implements Client, Worker {
         task.setInputData(inputIterator);
         computedData = Path.of(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID()));
         try {
-             Files.createFile(computedData);
+            Files.createFile(computedData);
             task.setOutputData(Files.newOutputStream(computedData));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         this.taskStorage.put(task, computedData);
-        logger.log("Running task: %s", task.toString());
+        logger.log("Running task: %s", task);
         task.run();
         this.setState(State.IDLE);
         return task.isComplete();
@@ -141,21 +105,6 @@ public class ClientImpl implements Client, Worker {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return true;
-    }
-
-    private void setState(State state) {
-        logger.log("Updating state to: %s", state);
-        this.status = state;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("[%s, %s]", clientName, status);
-    }
-
-    @Override
-    public boolean isAlive() {
         return true;
     }
 }

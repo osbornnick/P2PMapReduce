@@ -77,12 +77,12 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
         Map<String, Worker> availableClients = new HashMap<>();
         for (String cName : connectedClients.keySet()) {
             Client c = connectedClients.get(cName);
-            logger.log("Asking %s if busy", clientName);
+            logger.log("Asking %s if busy", cName);
             if (!timeout(cName, c::isBusy)) {
                 availableClients.put(cName, (Worker) c);
             }
         }
-        logger.log("Available workers are: %s", availableClients);
+        logger.log("Available workers are: %s", availableClients.keySet());
         return availableClients;
     }
 

@@ -10,10 +10,8 @@ import util.RemoteFileIterator;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
@@ -209,6 +207,14 @@ public class JobManagerImpl implements JobManager {
                 throw new RuntimeException(e);
             }
         }
+
+        this.chunks.forEach(p -> {
+            try {
+                Files.deleteIfExists(p);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         // print out location of output data
         System.out.println("MapReduce completed!!!");
