@@ -26,4 +26,6 @@ public interface Client extends Remote {
      * @return
      */
     boolean mapReduce(Task map, Task reduce, InputStream[] data, int reducers) throws RemoteException;
+
+    boolean isAlive() throws RemoteException;
 }

@@ -35,7 +35,8 @@ public class ClientImpl implements Client, Worker {
     public static void main(String[] args) {
         // args: name hostname port
         if (args.length > 4 || args.length < 3) {
-            System.out.println("no");
+            System.out.println("Usage: java -jar <clientName> <hostname> <port> (--example)");
+            System.exit(1);
         }
         String clientName = args[0];
         String hostname = args[1];
@@ -57,9 +58,9 @@ public class ClientImpl implements Client, Worker {
     }
 
     public ClientImpl(String clientName, String hostname, int port) {
-        this.status = State.IDLE;
-        this.clientName = clientName;
         this.logger = new Logger(clientName);
+        this.setState(State.IDLE);
+        this.clientName = clientName;
         Registry reg = null;
         Client stub = null;
         try {
@@ -85,9 +86,8 @@ public class ClientImpl implements Client, Worker {
 
     @Override
     public boolean runTask(Task task, RemoteIterator<String> inputIterator) throws RemoteException {
-        // maybe even a remote stream
-
-        this.status = State.BUSY; // maybe? maybe can do multiple units of work;
+        logger.log("Received run task request");
+        this.setState(State.BUSY); // maybe? maybe can do multiple units of work;
         task.setInputData(inputIterator);
         computedData = new File(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID()));
         try {
@@ -96,8 +96,9 @@ public class ClientImpl implements Client, Worker {
             throw new RuntimeException(e);
         }
         this.taskStorage.put(task, computedData);
+        logger.log("Running task: %s", task.toString());
         task.run();
-        this.status = State.IDLE;
+        this.setState(State.IDLE);
         return task.isComplete();
     }
 
@@ -112,6 +113,7 @@ public class ClientImpl implements Client, Worker {
 
     @Override
     public boolean mapReduce(Task map, Task reduce, InputStream[] dataStreams, int reducers) {
+        logger.log("Requesting workers from coordinator");
         Map<String, Worker> workerMap;
         try {
             workerMap = this.coordinator.availableWorkers(this.clientName);
@@ -119,6 +121,8 @@ public class ClientImpl implements Client, Worker {
             throw new RuntimeException(e);
         }
 
+        logger.log("Workers received: %s", workerMap);
+        logger.log("spawning job thread");
         Thread jobThread = new Thread(new JobManagerImpl(this.clientName, map, reduce, dataStreams, workerMap, reducers));
         jobThread.start();
 
@@ -129,5 +133,20 @@ public class ClientImpl implements Client, Worker {
     public boolean taskCompleted(Task task) {
         File toDelete = this.taskStorage.remove(task);
         return toDelete.delete();
+    }
+
+    private void setState(State state) {
+        logger.log("Updating state to: %s", state);
+        this.status = state;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s, %s]", clientName, status);
+    }
+
+    @Override
+    public boolean isAlive() {
+        return true;
     }
 }

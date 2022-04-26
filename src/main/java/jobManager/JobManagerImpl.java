@@ -192,21 +192,21 @@ public class JobManagerImpl implements JobManager {
         }
 
         // delete all intermediate data
-//        for (Assignment ma : mapAssignments) {
-//            try {
-//                ma.worker.taskCompleted(this.map);
-//            } catch (RemoteException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
-//
-//        for (Assignment ra : reduceAssignments) {
-//            try {
-//                ra.worker.taskCompleted(this.reduce);
-//            } catch (RemoteException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
+        for (Assignment ma : mapAssignments) {
+            try {
+                ma.worker.taskCompleted(this.map);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        for (Assignment ra : reduceAssignments) {
+            try {
+                ra.worker.taskCompleted(this.reduce);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         // print out location of output data
         System.out.println("MapReduce completed!!!");

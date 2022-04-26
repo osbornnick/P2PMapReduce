@@ -61,6 +61,11 @@ public abstract class AbstractTask implements Task {
     public void emit(String key, String value) throws IOException {
         this.output.write(String.format("%s, %s%n", key, value).getBytes(StandardCharsets.UTF_8));
     }
+
+    @Override
+    public String toString() {
+        return String.format("[%s - %s]", this.getType(), this.getUID());
+    }
 }
 
 
