@@ -83,14 +83,11 @@ public class JobManagerImpl implements JobManager {
             WorkerContainer wc = this.workers.get(i);
             try {
                 int finalI = i;
-                DataGetter dg = new DataGetter() {
-                    @Override
-                    public RemoteIterator<String> get() {
-                        try{
-                            return generateRemoteIterator(finalI);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                DataGetter dg = () -> {
+                    try {
+                        return generateRemoteIterator(finalI);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 };
                 a = new Assignment(wc.worker, wc.workerName, dg, this.map);
@@ -110,11 +107,11 @@ public class JobManagerImpl implements JobManager {
         mapAssignments.forEach(a -> {
             Thread t = new Thread(new workerThread(a));
             t.start();
-//            try {
-//                t.join();
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
+            try {
+                t.join(2);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             mapThreads.put(a, t);
         });
 
@@ -128,7 +125,6 @@ public class JobManagerImpl implements JobManager {
                 if (m.isComplete) {
                     availableWorkers.add(new WorkerContainer(m.workerName, m.worker));
                     incomplete.remove(m);
-                    logger.log("");
                     finished++;
                 }
             }
@@ -266,7 +262,7 @@ public class JobManagerImpl implements JobManager {
         this.outputFiles.forEach(f -> System.out.printf("%s%n", f));
     }
 
-    private static class workerThread implements Runnable {
+    private class workerThread implements Runnable {
 
         Assignment a;
 
@@ -279,6 +275,7 @@ public class JobManagerImpl implements JobManager {
             try {
                 a.worker.runTask(a.task, a.dataGetter.get());
                 a.isComplete = true;
+                logger.log("Assignment %s complete", a);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -362,7 +359,7 @@ public class JobManagerImpl implements JobManager {
         }
     }
 
-    private class WorkerContainer {
+    private static class WorkerContainer {
         Worker worker;
         String workerName;
 

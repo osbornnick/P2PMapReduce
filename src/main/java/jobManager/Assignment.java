@@ -44,9 +44,4 @@ public class Assignment {
         Assignment t = (Assignment) obj;
         return t.getUID().equals(this.getUID());
     }
-
-    public static Assignment fromAssignment(Assignment that) {
-        return new Assignment(that.worker, that.workerName, that.dataGetter, that.task);
-    }
-
 }

@@ -12,13 +12,12 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class ClientImpl extends AbstractClient implements Worker {
     public Path computedData;
 
-    private final Map<Task, Path> taskStorage;
+    private final Map<Task, List<Path>> taskStorage;
 
     public static void main(String[] args) {
         // args: name hostname port
@@ -55,7 +54,7 @@ public class ClientImpl extends AbstractClient implements Worker {
         logger.log("Received run task request");
         this.setState(State.BUSY); // maybe? maybe can do multiple units of work;
         task.setInputData(inputIterator);
-        computedData = Path.of(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID()));
+        computedData = Path.of(String.format("./temp-task-%s-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID().toString().substring(0, 4), UUID.randomUUID().toString().substring(0, 4)));
         try {
             Files.createFile(computedData);
             task.setOutputData(Files.newOutputStream(computedData));
@@ -63,7 +62,14 @@ public class ClientImpl extends AbstractClient implements Worker {
             throw new RuntimeException(e);
         }
 
-        this.taskStorage.put(task, computedData);
+        List<Path> storage;
+        if (this.taskStorage.containsKey(task)) {
+            storage = this.taskStorage.get(task);
+        } else {
+            storage = new ArrayList<>();
+            taskStorage.put(task, storage);
+        }
+        storage.add(computedData);
         logger.log("Running task: %s", task);
         task.run();
         this.setState(State.IDLE);
@@ -99,12 +105,14 @@ public class ClientImpl extends AbstractClient implements Worker {
 
     @Override
     public boolean taskCompleted(Task task) {
-        Path toDelete = this.taskStorage.remove(task);
-        try {
-            Files.delete(toDelete);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        List<Path> toDelete = this.taskStorage.remove(task);
+        toDelete.forEach(p -> {
+            try {
+                Files.delete(p);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
         return true;
     }
 }
