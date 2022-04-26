@@ -6,20 +6,19 @@ import com.healthmarketscience.rmiio.SerialRemoteIteratorClient;
 import com.healthmarketscience.rmiio.SerialRemoteIteratorServer;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class RemoteFileIterator {
-    public static RemoteIterator<String> iterator(File f) throws IOException {
-        if (!f.canRead()) {
+    public static RemoteIterator<String> iterator(Path path) throws IOException {
+        if (!Files.isReadable(path)) {
             throw new IOException("can't read file");
         }
-        FileReader fileReader = new FileReader(f);
 
-        BufferedReader buff = new BufferedReader(fileReader);
+        BufferedReader buff = Files.newBufferedReader(path);
         Iterator<String> iter = new Iterator<>() {
 
             private String cachedLine;

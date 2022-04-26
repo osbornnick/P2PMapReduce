@@ -15,6 +15,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -28,9 +30,9 @@ public class ClientImpl implements Client, Worker {
     private String clientName;
     private Logger logger;
     private Coordinator coordinator;
-    public File computedData;
+    public Path computedData;
 
-    private Map<Task, File> taskStorage;
+    private Map<Task, Path> taskStorage;
 
     public static void main(String[] args) {
         // args: name hostname port
@@ -89,12 +91,14 @@ public class ClientImpl implements Client, Worker {
         logger.log("Received run task request");
         this.setState(State.BUSY); // maybe? maybe can do multiple units of work;
         task.setInputData(inputIterator);
-        computedData = new File(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID()));
+        computedData = Path.of(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID()));
         try {
-            task.setOutputData(new FileOutputStream(computedData));
-        } catch (FileNotFoundException e) {
+             Files.createFile(computedData);
+            task.setOutputData(Files.newOutputStream(computedData));
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
         this.taskStorage.put(task, computedData);
         logger.log("Running task: %s", task.toString());
         task.run();
@@ -131,8 +135,13 @@ public class ClientImpl implements Client, Worker {
 
     @Override
     public boolean taskCompleted(Task task) {
-        File toDelete = this.taskStorage.remove(task);
-        return toDelete.delete();
+        Path toDelete = this.taskStorage.remove(task);
+        try {
+            Files.delete(toDelete);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return true;
     }
 
     private void setState(State state) {

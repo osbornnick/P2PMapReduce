@@ -14,6 +14,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,8 +34,8 @@ public class JobManagerImpl implements JobManager {
     int reducers;
     List<Assignment> mapAssignments = new ArrayList<>();
     List<Assignment> reduceAssignments = new ArrayList<>();
-    List<File> chunks;
-    List<File> outputFiles;
+    List<Path> chunks;
+    List<Path> outputFiles;
     InputStream[] inputStreams;
     UUID uid;
     String clientName;
@@ -57,13 +59,13 @@ public class JobManagerImpl implements JobManager {
         File parent = new File("./output");
         if (!parent.exists()) parent.mkdirs();
         for (int i = 0; i < reducers; i++) {
-            File f = new File(String.format("./output/%s-%d.csv", uid.toString(), i));
+            Path p = Path.of(String.format("./output/%s-%d.csv", uid.toString(), i));
             try {
-                f.createNewFile();
+                Files.createFile(p);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            this.outputFiles.add(f);
+            this.outputFiles.add(p);
         }
     }
 
@@ -179,8 +181,8 @@ public class JobManagerImpl implements JobManager {
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
-            File writeTo = outputFiles.get(l);
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(writeTo))) {
+            Path writeTo = outputFiles.get(l);
+            try (BufferedWriter writer = Files.newBufferedWriter(writeTo)) {
                 while (data.hasNext()) {
                     writer.write(data.next());
                     writer.newLine();
@@ -211,7 +213,7 @@ public class JobManagerImpl implements JobManager {
         // print out location of output data
         System.out.println("MapReduce completed!!!");
         System.out.println("find output in:");
-        this.outputFiles.forEach(f -> System.out.printf("%s%n", f.getPath()));
+        this.outputFiles.forEach(f -> System.out.printf("%s%n", f));
     }
 
     private static class workerThread implements Runnable {
@@ -234,8 +236,8 @@ public class JobManagerImpl implements JobManager {
     }
 
     private RemoteIterator<String> generateRemoteIterator(int nth) throws IOException {
-        File chunk = this.chunks.get(nth);
-        logger.log("Generating iterator for chunk %d from file %s", nth, chunk.getPath());
+        Path chunk = this.chunks.get(nth);
+        logger.log("Generating iterator for chunk %d from file %s", nth, chunk);
         return RemoteFileIterator.iterator(chunk);
     }
 
@@ -270,14 +272,18 @@ public class JobManagerImpl implements JobManager {
         };
 
         for (int i = 0; i < totalWorkers; i++) {
-            File f = new File(String.format("./chunk-%s.csv", i));
-            f.createNewFile();
-            chunks.add(f);
+            Path p = Path.of(String.format("./chunk-%s.csv", i));
+            try {
+                Files.createFile(p);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            chunks.add(p);
         }
 
-        List<PrintWriter> openChunks = chunks.stream().map(f -> {
+        List<BufferedWriter> openChunks = chunks.stream().map(f -> {
             try {
-                return new PrintWriter( new FileWriter(f));
+                return Files.newBufferedWriter(f);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -286,15 +292,23 @@ public class JobManagerImpl implements JobManager {
         int n = 0;
         while (iter.hasNext()) {
             String data = iter.next();
-            PrintWriter chunk = openChunks.get(n % totalWorkers);
-            chunk.println(data);
+            BufferedWriter chunk = openChunks.get(n % totalWorkers);
+            chunk.write(data);
+            chunk.newLine();
             n++;
         }
 
-        openChunks.forEach(fw -> fw.close());
+        openChunks.forEach(fw -> {
+            try {
+                fw.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
         logger.log("Chunks generated: ");
-        for (File f : chunks) {
-            logger.log("%-20s", f.getPath());
+        for (Path p : chunks) {
+            logger.log("%-20s", p);
         }
     }
 }
