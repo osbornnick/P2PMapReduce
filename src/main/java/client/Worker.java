@@ -5,6 +5,7 @@ import task.Task;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.UUID;
 
 public interface Worker extends Remote {
 
@@ -14,9 +15,9 @@ public interface Worker extends Remote {
      * @return true if success, false otherwise
      * @throws RemoteException if disconnects or fails
      */
-    boolean runTask(Task task, RemoteIterator<String> remoteIterator) throws RemoteException;
+    boolean runTask(Task task, RemoteIterator<String> remoteIterator, UUID workid) throws RemoteException;
 
-    RemoteIterator<String> getComputedData() throws RemoteException;
+    RemoteIterator<String> getComputedData(UUID workid) throws RemoteException;
 
-    boolean taskCompleted(Task task) throws RemoteException;
+    void taskCompleted(UUID workid) throws RemoteException;
 }

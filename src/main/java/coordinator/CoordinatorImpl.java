@@ -108,7 +108,8 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
             try {
                 return timeoutable.execute();
             } catch (RemoteException e) {
-                throw new RuntimeException(e);
+                localLogout(clientName);
+                return false;
             }
         });
         boolean result;

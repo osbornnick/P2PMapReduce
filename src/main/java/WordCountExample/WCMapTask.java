@@ -17,8 +17,8 @@ public class WCMapTask extends AbstractTask {
         try {
             while (this.iterator.hasNext()) {
                 String line = this.iterator.next();
-                for (String s : line.split(" ")) {
-                    this.emit(s, "1");
+                for (String s : line.split("\\W+")) {
+                    this.emit(s.toLowerCase(), "1");
                 }
             }
         } catch (IOException e) {

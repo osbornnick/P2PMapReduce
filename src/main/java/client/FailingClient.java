@@ -7,6 +7,7 @@ import task.Task;
 import java.io.IOException;
 import java.io.InputStream;
 import java.rmi.RemoteException;
+import java.util.UUID;
 
 public class FailingClient extends AbstractClient implements Worker {
 
@@ -49,7 +50,8 @@ public class FailingClient extends AbstractClient implements Worker {
     }
 
     @Override
-    public boolean runTask(Task task, RemoteIterator<String> remoteIterator) throws RemoteException {
+    public boolean runTask(Task task, RemoteIterator<String> remoteIterator, UUID workid) throws RemoteException {
+        logger.log("Received task request %s", task);
         int i = 0;
         try {
             while (remoteIterator.hasNext() && i < 100) {
@@ -59,16 +61,16 @@ public class FailingClient extends AbstractClient implements Worker {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        logger.log("waiting forever...");
         while (true) {}
     }
 
     @Override
-    public RemoteIterator<String> getComputedData() throws RemoteException {
+    public RemoteIterator<String> getComputedData(UUID workid) throws RemoteException {
         return null;
     }
 
     @Override
-    public boolean taskCompleted(Task task) throws RemoteException {
-        return false;
+    public void taskCompleted(UUID workid) throws RemoteException {
     }
 }

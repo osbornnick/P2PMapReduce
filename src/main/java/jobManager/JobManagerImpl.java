@@ -25,7 +25,8 @@ import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class JobManagerImpl implements JobManager {
@@ -60,20 +61,11 @@ public class JobManagerImpl implements JobManager {
         this.outputFiles = new ArrayList<>();
         File parent = new File("./output");
         if (!parent.exists()) parent.mkdirs();
-        for (int i = 0; i < reducers; i++) {
-            Path p = Path.of(String.format("./output/%s-%d.csv", uid.toString(), i));
-            try {
-                Files.createFile(p);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            this.outputFiles.add(p);
-        }
     }
 
     @Override
     public void run() {
-
+        ExecutorService timerExecutor = Executors.newCachedThreadPool();
         // SPLIT DATA
         // create chunks
 
@@ -90,7 +82,7 @@ public class JobManagerImpl implements JobManager {
                         throw new RuntimeException(e);
                     }
                 };
-                a = new Assignment(wc.worker, wc.workerName, dg, this.map);
+                a = new Assignment(wc, dg, this.map, timerExecutor);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -99,60 +91,10 @@ public class JobManagerImpl implements JobManager {
 
 
         logger.log("Map Assignments generated: %s", mapAssignments.toString());
+        logger.log("Running map assignments");
 
-        Map<Assignment, Thread> mapThreads = new HashMap<>();
+        runAssignments(mapAssignments, new HashSet<>());
 
-        boolean mapComplete = false;
-        // generate thread for each assignment
-        mapAssignments.forEach(a -> {
-            Thread t = new Thread(new workerThread(a));
-            t.start();
-            try {
-                t.join(2);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            mapThreads.put(a, t);
-        });
-
-        Set<WorkerContainer> availableWorkers = new HashSet<>();
-        List<Assignment> incomplete =  new ArrayList<>(mapAssignments);
-        List<Assignment> reassigned = new ArrayList<>();
-        while (!mapComplete) {
-            int finished = 0;
-            int total = mapAssignments.size();
-            for (Assignment m : mapAssignments) {
-                if (m.isComplete) {
-                    availableWorkers.add(new WorkerContainer(m.workerName, m.worker));
-                    incomplete.remove(m);
-                    finished++;
-                }
-            }
-            if (finished == total) mapComplete = true;
-            else if (finished > total * 2/3) {
-                for (Assignment stalled : incomplete) {
-                    if (reassigned.contains(stalled)) continue;
-                    logger.log("Reassigning stalled work");
-                    mapThreads.get(stalled).interrupt();
-                    mapThreads.remove(stalled);
-                    // todo what if no available workers?
-
-                    WorkerContainer available = availableWorkers.iterator().next();
-                    availableWorkers.remove(available);
-                    logger.log("Reassigning from %s to %s", stalled.workerName, available.workerName);
-                    stalled.worker = available.worker;
-                    stalled.workerName = available.workerName;
-                    Thread t = new Thread(new workerThread(stalled));
-                    t.start();
-                    mapThreads.put(stalled, t);
-                    reassigned.add(stalled);
-                }
-            }
-        }
-
-        // todo: reassignment of work
-
-        // map tasks have all finished at this point
         logger.log("Map completed");
 
         // REDUCE
@@ -163,19 +105,18 @@ public class JobManagerImpl implements JobManager {
             reduceWorkers.add(new WorkerContainer(wc.workerName, wc.worker));
         }
 
-        // make assignments
+        // make reduce assignments
         int k = 0;
         for (Assignment mapAssignment : mapAssignments) {
             int workerIndex = k % reducers;
             WorkerContainer wc = reduceWorkers.get(workerIndex);
-            String workerName = wc.workerName;
-            Worker worker = wc.worker;
+
             if (k >= reducers) {
                 Assignment a = reduceAssignments.get(workerIndex); // workerIndex should correspond to assignment index
                 RemoteIterator<String> prev = a.dataGetter.get();
                 a.dataGetter = () -> {
                     try {
-                        return new CombineRemoteIterator<>(mapAssignment.worker.getComputedData(), prev);
+                        return new CombineRemoteIterator<>(mapAssignment.getComputedData(), prev);
                     } catch (RemoteException e) {
                         throw new RuntimeException(e);
                     }
@@ -183,39 +124,31 @@ public class JobManagerImpl implements JobManager {
             } else {
                 DataGetter dg = () -> {
                     try {
-                        return mapAssignment.worker.getComputedData();
+                        return mapAssignment.getComputedData();
                     } catch (RemoteException e) {
                         throw new RuntimeException(e);
                     }
                 };
-                Assignment reduceAssignment = new Assignment(worker, workerName, dg, this.reduce);
+                Assignment reduceAssignment = new Assignment(wc, dg, this.reduce, timerExecutor);
                 reduceAssignments.add(reduceAssignment);
             }
             k++;
         }
+        logger.log("Reduce assignments generated: %s", reduceAssignments);
+        logger.log("Running reduce assignments");
+        Set<WorkerContainer> availableWorkers = new HashSet<>(workers);
+        reduceAssignments.forEach(a -> availableWorkers.remove(a.workerContainer));
+        runAssignments(reduceAssignments, availableWorkers);
 
-        List<Thread> reduceThreads = new ArrayList<>();
-
-        // do the reduce work
-        reduceAssignments.forEach(a -> {
-            Thread t = new Thread(new workerThread(a));
-            t.start();
-            try {
-                t.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            reduceThreads.add(t);
-        });
-
-        // todo reassign work after super majority are finished?
-
+        logger.log("Reduce completed");
         // for each reduce assignment, get the outputData and stream to a file.
+        this.makeOutputFiles();
+
         int l = 0;
         for (Assignment a : reduceAssignments) {
             RemoteIterator<String> data;
             try {
-                data = a.worker.getComputedData();
+                data = a.getComputedData();
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
@@ -234,7 +167,7 @@ public class JobManagerImpl implements JobManager {
         // delete all intermediate data
         for (Assignment ma : mapAssignments) {
             try {
-                ma.worker.taskCompleted(this.map);
+                ma.cleanup();
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
@@ -242,7 +175,7 @@ public class JobManagerImpl implements JobManager {
 
         for (Assignment ra : reduceAssignments) {
             try {
-                ra.worker.taskCompleted(this.reduce);
+                ra.cleanup();
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
@@ -256,29 +189,60 @@ public class JobManagerImpl implements JobManager {
             }
         });
 
+        timerExecutor.shutdownNow();
         // print out location of output data
         System.out.println("MapReduce completed!!!");
         System.out.println("find output in:");
         this.outputFiles.forEach(f -> System.out.printf("%s%n", f));
     }
 
-    private class workerThread implements Runnable {
-
-        Assignment a;
-
-        workerThread(Assignment assignment) {
-            this.a = assignment;
-        }
-
-        @Override
-        public void run() {
+    private void makeOutputFiles() {
+        for (int i = 0; i < reducers; i++) {
+            Path p = Path.of(String.format("./output/%s-%d.csv", uid.toString(), i));
             try {
-                a.worker.runTask(a.task, a.dataGetter.get());
-                a.isComplete = true;
-                logger.log("Assignment %s complete", a);
-            } catch (RemoteException e) {
-                e.printStackTrace();
+                Files.createFile(p);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
+            this.outputFiles.add(p);
+        }
+    }
+
+    private void runAssignments(List<Assignment> assignments, Set<WorkerContainer> availableWorkers) {
+        boolean isComplete = false;
+        Map<Assignment, Thread> threads = new HashMap<>();
+        assignments.forEach(a -> {
+            Thread t = new Thread(a);
+            t.start();
+            threads.put(a, t);
+        });
+
+        while (!isComplete) {
+            int finished = 0;
+            int total = assignments.size();
+            for (Assignment a : assignments) {
+                if (a.isComplete) {
+                    availableWorkers.add(a.workerContainer);
+                    finished++;
+                } else if (a.needsReassign) {
+                    logger.log("Assignment %s needs reassign", a);
+                    threads.remove(a).interrupt();
+                    Iterator<WorkerContainer> workerIterator = availableWorkers.iterator();
+                    if (workerIterator.hasNext()) {
+                        WorkerContainer available = availableWorkers.iterator().next();
+                        availableWorkers.remove(available);
+                        a.reassign(available);
+                        Thread t = new Thread(a);
+                        t.start();
+                        threads.put(a, t);
+                    } else {
+                        // todo
+                        logger.log("No workers available for reassignment of %s", a);
+                        // no available workers, what do?
+                    }
+                }
+            }
+            if (finished == total) isComplete = true;
         }
     }
 
@@ -356,29 +320,6 @@ public class JobManagerImpl implements JobManager {
         logger.log("Chunks generated: ");
         for (Path p : chunks) {
             logger.log("%-20s", p);
-        }
-    }
-
-    private static class WorkerContainer {
-        Worker worker;
-        String workerName;
-
-        WorkerContainer(String s, Worker w) {
-            workerName = s;
-            worker = w;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (!(obj instanceof WorkerContainer)) return false;
-            WorkerContainer t = (WorkerContainer) obj;
-            return Objects.equals(t.workerName, this.workerName);
-        }
-
-        @Override
-        public int hashCode() {
-            return workerName.hashCode();
         }
     }
 }

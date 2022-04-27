@@ -17,7 +17,7 @@ import java.util.*;
 public class ClientImpl extends AbstractClient implements Worker {
     public Path computedData;
 
-    private final Map<Task, List<Path>> taskStorage;
+    private final Map<UUID, Path> taskStorage;
 
     public static void main(String[] args) {
         // args: name hostname port
@@ -50,11 +50,11 @@ public class ClientImpl extends AbstractClient implements Worker {
     }
 
     @Override
-    public boolean runTask(Task task, RemoteIterator<String> inputIterator) throws RemoteException {
+    public boolean runTask(Task task, RemoteIterator<String> inputIterator, UUID workid) throws RemoteException {
         logger.log("Received run task request");
         this.setState(State.BUSY); // maybe? maybe can do multiple units of work;
         task.setInputData(inputIterator);
-        computedData = Path.of(String.format("./temp-task-%s-%s-%s-%s.csv", this.clientName, task.getType(), task.getUID().toString().substring(0, 4), UUID.randomUUID().toString().substring(0, 4)));
+        computedData = Path.of(String.format("./temp-task-%s-%s-%s.csv", this.clientName, task.getType(), sub(workid)));
         try {
             Files.createFile(computedData);
             task.setOutputData(Files.newOutputStream(computedData));
@@ -62,24 +62,22 @@ public class ClientImpl extends AbstractClient implements Worker {
             throw new RuntimeException(e);
         }
 
-        List<Path> storage;
-        if (this.taskStorage.containsKey(task)) {
-            storage = this.taskStorage.get(task);
-        } else {
-            storage = new ArrayList<>();
-            taskStorage.put(task, storage);
-        }
-        storage.add(computedData);
+
+        this.taskStorage.put(workid, computedData);
         logger.log("Running task: %s", task);
         task.run();
         this.setState(State.IDLE);
         return task.isComplete();
     }
 
+    private String sub(Object o) {
+        return o.toString().substring(0, 4);
+    }
+
     @Override
-    public RemoteIterator<String> getComputedData() throws RemoteException {
+    public RemoteIterator<String> getComputedData(UUID workid) throws RemoteException {
         try {
-            return RemoteFileIterator.iterator(this.computedData);
+            return RemoteFileIterator.iterator(this.taskStorage.get(workid));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -104,15 +102,12 @@ public class ClientImpl extends AbstractClient implements Worker {
     }
 
     @Override
-    public boolean taskCompleted(Task task) {
-        List<Path> toDelete = this.taskStorage.remove(task);
-        toDelete.forEach(p -> {
-            try {
-                Files.delete(p);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        return true;
+    public void taskCompleted(UUID workid) {
+        Path toDelete = this.taskStorage.remove(workid);
+        try {
+            Files.delete(toDelete);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
