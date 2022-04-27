@@ -71,6 +71,9 @@ public class FailingClient extends AbstractClient implements Worker {
     }
 
     @Override
-    public void taskCompleted(UUID workid) throws RemoteException {
+    public boolean taskCompleted(UUID workid) throws RemoteException {
+        logger.log("Received task complete message");
+        logger.log("waiting forever...");
+        while (true) {}
     }
 }

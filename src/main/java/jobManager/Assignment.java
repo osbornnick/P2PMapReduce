@@ -81,7 +81,12 @@ public class Assignment implements Runnable {
 
     public void cleanup() throws RemoteException {
         for (WorkerContainer wc : this.history) {
-            wc.worker.taskCompleted(this.uid);
+            Future<Boolean> future = timerExecutor.submit(() -> wc.worker.taskCompleted(this.uid));
+            try {
+                future.get(2, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                future.cancel(true);
+            }
         }
     }
 }

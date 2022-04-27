@@ -33,11 +33,12 @@ public class ClientImpl extends AbstractClient implements Worker {
 
         if (args.length == 4 && args[3].equals("--example")) {
             try (InputStream is = ClientImpl.class.getResourceAsStream("/EXAMPLE.txt")) {
-                System.out.println(is);
                 Task map = new WCMapTask();
                 Task reduce = new WCReduceTask();
                 InputStream[] streams = {is};
                 client.mapReduce(map, reduce, streams, 1);
+                client.logger.log("All done, exiting");
+                System.exit(0);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -97,17 +98,22 @@ public class ClientImpl extends AbstractClient implements Worker {
         logger.log("spawning job thread");
         Thread jobThread = new Thread(new JobManagerImpl(this.clientName, map, reduce, dataStreams, workerMap, reducers));
         jobThread.start();
-
+        try {
+            jobThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         return true;
     }
 
     @Override
-    public void taskCompleted(UUID workid) {
+    public boolean taskCompleted(UUID workid) {
         Path toDelete = this.taskStorage.remove(workid);
         try {
             Files.delete(toDelete);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return true;
     }
 }

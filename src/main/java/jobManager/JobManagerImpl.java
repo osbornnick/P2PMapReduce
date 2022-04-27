@@ -231,6 +231,7 @@ public class JobManagerImpl implements JobManager {
                     if (workerIterator.hasNext()) {
                         WorkerContainer available = availableWorkers.iterator().next();
                         availableWorkers.remove(available);
+                        logger.log("Reassigning %s to worker %s", a, available);
                         a.reassign(available);
                         Thread t = new Thread(a);
                         t.start();

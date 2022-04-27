@@ -25,4 +25,9 @@ public class WorkerContainer {
     public int hashCode() {
         return workerName.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return workerName;
+    }
 }

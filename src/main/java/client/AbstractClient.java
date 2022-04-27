@@ -26,13 +26,15 @@ public abstract class AbstractClient implements Client {
             reg = LocateRegistry.getRegistry(hostname, port);
             stub = (Client) UnicastRemoteObject.exportObject(this, 0);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log("Failed to export self to rmi registry. Is there a registry running at %s:%d?", hostname, port);
+            System.exit(1);
         }
         try {
             this.coordinator = (Coordinator) reg.lookup("coord");
             this.coordinator.login(clientName, stub);
         } catch (NotBoundException | RemoteException e) {
-            e.printStackTrace();
+            logger.log("Failed to find coordinator registered on rmi registry with name %s", "coord");
+            System.exit(2);
         }
     }
 

@@ -19,5 +19,5 @@ public interface Worker extends Remote {
 
     RemoteIterator<String> getComputedData(UUID workid) throws RemoteException;
 
-    void taskCompleted(UUID workid) throws RemoteException;
+    boolean taskCompleted(UUID workid) throws RemoteException;
 }
