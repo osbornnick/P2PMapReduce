@@ -45,7 +45,8 @@ public class ClientImpl extends AbstractClient implements Worker, MapReducer {
                 client.logger.log("All done, exiting");
                 System.exit(0);
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("Can't find EXAMPLE.txt in this directory. Run this jar file from the same directory as EXAMPLE.txt");
+                System.exit(1);
             }
         }
     }
