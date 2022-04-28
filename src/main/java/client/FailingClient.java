@@ -9,6 +9,10 @@ import java.io.InputStream;
 import java.rmi.RemoteException;
 import java.util.UUID;
 
+/**
+ * A client that is implemented to wait infinitely when given a task. This allows for demonstration of the fault
+ *   tolerance through reassignment of work.
+ */
 public class FailingClient extends AbstractClient implements Worker {
 
     public static void main(String[] args) {

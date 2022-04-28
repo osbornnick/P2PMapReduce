@@ -6,6 +6,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A sample implementation of a reduce operation for use in the word count example.
+ *   The implemented run (reduce) task takes a list of words and counts and aggregates them.
+ */
 public class WCReduceTask extends AbstractTask {
 
     private final Map<String, Integer> counts;

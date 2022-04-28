@@ -14,6 +14,11 @@ import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.*;
 
+/**
+ * A basic client implementation, it publishes its stub on the RMI registry and becomes available for work.
+ *   It can be also given a command line arguement --example, that runs the included MapReduce
+ *   word count example.
+ */
 public class ClientImpl extends AbstractClient implements Worker {
     public Path computedData;
 
