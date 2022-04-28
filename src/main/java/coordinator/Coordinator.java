@@ -18,7 +18,7 @@ public interface Coordinator extends Remote {
     /**
      * Clients can call this function to register with the Coordinator
      * @return true if successfully registered, false otherwise
-     * @throws RemoteException rmi
+     * @throws RemoteException rmi failure
      */
     boolean login(String clientName, Client stub) throws RemoteException;
 
