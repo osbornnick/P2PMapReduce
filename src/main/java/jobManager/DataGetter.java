@@ -3,13 +3,13 @@ package jobManager;
 import com.healthmarketscience.rmiio.RemoteIterator;
 
 /**
- * An interface to represent an object that has the capability to create a remote iterator for a piece of data
+ * Functional object interface for getting RemoteIterators.
  */
 public interface DataGetter {
 
     /**
-     * Return a remote iterate that iterates over the data associated with this DataGetter
-     * @return a remote iterate that iterates over the data associated with this DataGetter
+     * Get the associated RemoteIterator
+     * @return iterator of strings that is accessed remotely.
      */
     RemoteIterator<String> get();
 }

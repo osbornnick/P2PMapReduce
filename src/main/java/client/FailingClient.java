@@ -43,7 +43,7 @@ public class FailingClient extends AbstractClient implements Worker {
     }
 
     @Override
-    public boolean mapReduce(Task map, Task reduce, InputStream[] data, int reducers) throws RemoteException {
+    public boolean mapReduce(Task map, Task reduce, InputStream[] data, int reducers) {
         return false;
     }
 

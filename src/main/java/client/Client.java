@@ -15,6 +15,11 @@ import java.rmi.RemoteException;
  */
 public interface Client extends Remote {
 
+    /**
+     * Determine if the client is busy.
+     * @return true if client is busy, false otherwise
+     * @throws RemoteException if rmi failure.
+     */
     boolean isBusy() throws RemoteException;
 
     /**
@@ -23,9 +28,14 @@ public interface Client extends Remote {
      * @param reduce the reduce task
      * @param data streams data files
      * @param reducers how many reducers the user would like
-     * @return
+     * @return true once operation is complete.
      */
-    boolean mapReduce(Task map, Task reduce, InputStream[] data, int reducers) throws RemoteException;
+    boolean mapReduce(Task map, Task reduce, InputStream[] data, int reducers);
 
+    /**
+     * Heartbeat
+     * @return true if alive, timeout otherwise
+     * @throws RemoteException if rmi failure.
+     */
     boolean isAlive() throws RemoteException;
 }
