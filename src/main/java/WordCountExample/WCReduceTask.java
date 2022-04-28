@@ -20,8 +20,7 @@ public class WCReduceTask extends AbstractTask {
     public void run() {
         try {
             while (this.iterator.hasNext()) {
-                String row = iterator.next();
-                String[] data = row.split(", ");
+                String[] data = getPair(iterator);
                 String word = data[0];
                 int num = Integer.parseInt(data[1]);
                 counts.compute(word, (k, v) -> (v == null) ? num : v + num);

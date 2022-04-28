@@ -66,6 +66,10 @@ public abstract class AbstractTask implements Task {
     public String toString() {
         return String.format("[%s - %s]", this.getType(), this.getUID());
     }
+
+    protected String[] getPair(RemoteIterator<String> iter) throws IOException {
+        return iter.next().split(", ");
+    }
 }
 
 

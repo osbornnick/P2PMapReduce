@@ -8,7 +8,6 @@ logs/*.txt
 # java
 .mtj.tmp/
 *.class
-*.jar
 *.war
 *.ear
 *.nar
