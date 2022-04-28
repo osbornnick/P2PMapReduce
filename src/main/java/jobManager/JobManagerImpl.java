@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +55,7 @@ public class JobManagerImpl implements JobManager {
         try {
             this.generateChunks(inputStreams);
         } catch (IOException e) {
+            logger.log("Failed to open inputStream in %s", inputStreams);
             throw new RuntimeException(e);
         }
         this.outputFiles = new ArrayList<>();
@@ -116,7 +116,7 @@ public class JobManagerImpl implements JobManager {
                 RemoteIterator<String> prev = a.dataGetter.get();
                 a.dataGetter = () -> {
                     try {
-                        return new CombineRemoteIterator<>(mapAssignment.getComputedData(), prev);
+                        return new CombineRemoteIterator<>(mapAssignment.getResult(), prev);
                     } catch (RemoteException e) {
                         throw new RuntimeException(e);
                     }
@@ -124,7 +124,7 @@ public class JobManagerImpl implements JobManager {
             } else {
                 DataGetter dg = () -> {
                     try {
-                        return mapAssignment.getComputedData();
+                        return mapAssignment.getResult();
                     } catch (RemoteException e) {
                         throw new RuntimeException(e);
                     }
@@ -148,7 +148,7 @@ public class JobManagerImpl implements JobManager {
         for (Assignment a : reduceAssignments) {
             RemoteIterator<String> data;
             try {
-                data = a.getComputedData();
+                data = a.getResult();
             } catch (RemoteException e) {
                 throw new RuntimeException(e);
             }
@@ -216,10 +216,10 @@ public class JobManagerImpl implements JobManager {
             t.start();
             threads.put(a, t);
         });
+        int total = assignments.size();
 
         while (!isComplete) {
             int finished = 0;
-            int total = assignments.size();
             for (Assignment a : assignments) {
                 if (a.isComplete) {
                     availableWorkers.add(a.workerContainer);

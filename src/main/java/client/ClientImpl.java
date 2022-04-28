@@ -36,7 +36,8 @@ public class ClientImpl extends AbstractClient implements Worker {
                 Task map = new WCMapTask();
                 Task reduce = new WCReduceTask();
                 InputStream[] streams = {is};
-                client.mapReduce(map, reduce, streams, 1);
+                int reducers = 1;
+                client.mapReduce(map, reduce, streams, reducers);
                 client.logger.log("All done, exiting");
                 System.exit(0);
             } catch (IOException e) {
@@ -63,7 +64,6 @@ public class ClientImpl extends AbstractClient implements Worker {
             throw new RuntimeException(e);
         }
 
-
         this.taskStorage.put(workid, computedData);
         logger.log("Running task: %s", task);
         task.run();
@@ -88,10 +88,14 @@ public class ClientImpl extends AbstractClient implements Worker {
     public boolean mapReduce(Task map, Task reduce, InputStream[] dataStreams, int reducers) {
         logger.log("Requesting workers from coordinator");
         Map<String, Worker> workerMap;
+        
         try {
             workerMap = this.coordinator.availableWorkers(this.clientName);
         } catch (RemoteException e) {
-            throw new RuntimeException(e);
+            logger.log("Can't communicate with coordinator. Shutting down.");
+            cleanup();
+            System.exit(1);
+            return false;
         }
 
         logger.log("Workers received: %s", workerMap);
@@ -107,7 +111,7 @@ public class ClientImpl extends AbstractClient implements Worker {
     }
 
     @Override
-    public boolean taskCompleted(UUID workid) {
+    public boolean taskCompleted(UUID workid) throws RemoteException {
         Path toDelete = this.taskStorage.remove(workid);
         try {
             Files.delete(toDelete);
@@ -115,5 +119,16 @@ public class ClientImpl extends AbstractClient implements Worker {
             e.printStackTrace();
         }
         return true;
+    }
+
+    private void cleanup() {
+        for (UUID uid : this.taskStorage.keySet()) {
+            Path toDelete = this.taskStorage.remove(uid);
+            try {
+                Files.delete(toDelete);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

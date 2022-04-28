@@ -33,7 +33,8 @@ public abstract class AbstractClient implements Client {
             this.coordinator = (Coordinator) reg.lookup("coord");
             this.coordinator.login(clientName, stub);
         } catch (NotBoundException | RemoteException e) {
-            logger.log("Failed to find coordinator registered on rmi registry with name %s", "coord");
+            logger.log("Failed to find coordinator registered on rmi registry %s:%d with name %s", hostname, port, "coord");
+            logger.log("Exiting");
             System.exit(2);
         }
     }

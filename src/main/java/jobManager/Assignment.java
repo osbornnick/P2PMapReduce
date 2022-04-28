@@ -1,6 +1,5 @@
 package jobManager;
 
-import client.Worker;
 import com.healthmarketscience.rmiio.RemoteIterator;
 import task.Task;
 
@@ -19,17 +18,17 @@ public class Assignment implements Runnable {
     DataGetter dataGetter;
     Task task;
     UUID uid;
-    ExecutorService timerExecutor;
+    ExecutorService executorService;
 
     boolean isComplete = false;
     boolean needsReassign = false;
 
-    Assignment(WorkerContainer wc, DataGetter dataGetter, Task task, ExecutorService timerExecutor) {
+    Assignment(WorkerContainer wc, DataGetter dataGetter, Task task, ExecutorService executorService) {
         this.uid = UUID.randomUUID();
         this.workerContainer = wc;
         this.dataGetter = dataGetter;
         this.task = task;
-        this.timerExecutor = timerExecutor;
+        this.executorService = executorService;
         this.history = new ArrayList<>();
         this.history.add(wc);
     }
@@ -64,9 +63,9 @@ public class Assignment implements Runnable {
 
     @Override
     public void run() {
-        Future<Boolean> future = timerExecutor.submit(() -> workerContainer.worker.runTask(task, dataGetter.get(), getUID()));
+        Future<Boolean> future = executorService.submit(() -> workerContainer.worker.runTask(task, dataGetter.get(), getUID()));
         try {
-            future.get(10, TimeUnit.SECONDS);
+            future.get(5, TimeUnit.SECONDS);
             isComplete = true;
         } catch (Exception e) {
             // failed for some reason
@@ -75,13 +74,13 @@ public class Assignment implements Runnable {
         }
     }
 
-    public RemoteIterator<String> getComputedData() throws RemoteException {
+    public RemoteIterator<String> getResult() throws RemoteException {
         return workerContainer.worker.getComputedData(this.uid);
     }
 
     public void cleanup() throws RemoteException {
         for (WorkerContainer wc : this.history) {
-            Future<Boolean> future = timerExecutor.submit(() -> wc.worker.taskCompleted(this.uid));
+            Future<Boolean> future = executorService.submit(() -> wc.worker.taskCompleted(this.uid));
             try {
                 future.get(2, TimeUnit.SECONDS);
             } catch (Exception e) {
