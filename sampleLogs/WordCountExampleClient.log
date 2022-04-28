@@ -1,0 +1,9 @@
+1651172054007> 1651172054007> Updating state to: IDLE
+1651172054220> 1651172054220> Requesting workers from coordinator
+1651172054256> 1651172054256> Workers received: {failing client=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49940](remote),objID:[-78cca:18071860835:-7fff, -5755963493326809304]]]]], client_4=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49922](remote),objID:[-4a0ba15c:1807185fed3:-7ff6, 5288608108443027188]]]]], client_1=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49922](remote),objID:[-4a0ba15c:1807185fed3:-7ffc, -1691948296881734892]]]]], client_0=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49922](remote),objID:[-4a0ba15c:1807185fed3:-7fff, -403607016429365509]]]]], client_3=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49922](remote),objID:[-4a0ba15c:1807185fed3:-7ff8, 375861423048573158]]]]], client_2=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49922](remote),objID:[-4a0ba15c:1807185fed3:-7ffa, 7329709364732197087]]]]], WordCountExampleClient=Proxy[Client,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[192.168.0.9:49957](remote),objID:[-5c16dd0e:180718613f7:-7fff, -8911081514365616005]]]]]}
+1651172054261> 1651172054261> spawning job thread
+1651172054405> 1651172054405> Received run task request
+1651172054406> 1651172054406> Updating state to: BUSY
+1651172054407> 1651172054407> Running task: [map - 8ddd692a-0aff-4a98-84e5-30cfaa337750]
+1651172054873> 1651172054873> Updating state to: IDLE
+1651172069037> 1651172069037> All done, exiting

@@ -1,0 +1,27 @@
+1651172054263> 1651172054263> Generating 7 chunks
+1651172054342> 1651172054342> Chunks generated: 
+1651172054342> 1651172054342> .\chunk-0.csv       
+1651172054343> 1651172054343> .\chunk-1.csv       
+1651172054343> 1651172054343> .\chunk-2.csv       
+1651172054343> 1651172054343> .\chunk-3.csv       
+1651172054343> 1651172054343> .\chunk-4.csv       
+1651172054343> 1651172054343> .\chunk-5.csv       
+1651172054343> 1651172054343> .\chunk-6.csv       
+1651172054346> 1651172054346> Map Assignments generated: [worker_name:failing client task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:client_4 task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:client_1 task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:client_0 task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:client_3 task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:client_2 task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750, worker_name:WordCountExampleClient task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750]
+1651172054346> 1651172054346> Running map assignments
+1651172054348> 1651172054348> Generating iterator for chunk 6 from file .\chunk-6.csv
+1651172054348> 1651172054348> Generating iterator for chunk 3 from file .\chunk-3.csv
+1651172054348> 1651172054348> Generating iterator for chunk 1 from file .\chunk-1.csv
+1651172054348> 1651172054348> Generating iterator for chunk 4 from file .\chunk-4.csv
+1651172054348> 1651172054348> Generating iterator for chunk 2 from file .\chunk-2.csv
+1651172054348> 1651172054348> Generating iterator for chunk 0 from file .\chunk-0.csv
+1651172054349> 1651172054348> Generating iterator for chunk 5 from file .\chunk-5.csv
+1651172059356> 1651172059356> Assignment worker_name:failing client task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750 needs reassign
+1651172059356> 1651172059356> Reassigning worker_name:failing client task_type:map taskUID:8ddd692a-0aff-4a98-84e5-30cfaa337750 to worker client_4
+1651172059357> 1651172059357> Generating iterator for chunk 0 from file .\chunk-0.csv
+1651172059476> 1651172059476> Map completed
+1651172059507> 1651172059507> Reduce assignments generated: [worker_name:failing client task_type:reduce taskUID:cae0784f-4834-47e8-b316-9845615bc18e]
+1651172059507> 1651172059507> Running reduce assignments
+1651172064524> 1651172064524> Assignment worker_name:failing client task_type:reduce taskUID:cae0784f-4834-47e8-b316-9845615bc18e needs reassign
+1651172064524> 1651172064524> Reassigning worker_name:failing client task_type:reduce taskUID:cae0784f-4834-47e8-b316-9845615bc18e to worker client_4
+1651172064973> 1651172064973> Reduce completed
