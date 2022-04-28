@@ -19,10 +19,8 @@ import java.util.*;
  *   It can be also given a command line arguement --example, that runs the included MapReduce
  *   word count example.
  */
-public class ClientImpl extends AbstractClient implements Worker {
+public class ClientImpl extends AbstractClient implements Worker, MapReducer {
     public Path computedData;
-
-    private final Map<UUID, Path> taskStorage;
 
     public static void main(String[] args) {
         // args: name hostname port
@@ -37,7 +35,8 @@ public class ClientImpl extends AbstractClient implements Worker {
         ClientImpl client = new ClientImpl(clientName, hostname, port);
 
         if (args.length == 4 && args[3].equals("--example")) {
-            try (InputStream is = ClientImpl.class.getResourceAsStream("/EXAMPLE.txt")) {
+            Path examplePath = Path.of("./EXAMPLE.txt");
+            try (InputStream is = Files.newInputStream(examplePath)) {
                 Task map = new WCMapTask();
                 Task reduce = new WCReduceTask();
                 InputStream[] streams = {is};
@@ -93,7 +92,7 @@ public class ClientImpl extends AbstractClient implements Worker {
     public boolean mapReduce(Task map, Task reduce, InputStream[] dataStreams, int reducers) {
         logger.log("Requesting workers from coordinator");
         Map<String, Worker> workerMap;
-        
+
         try {
             workerMap = this.coordinator.availableWorkers(this.clientName);
         } catch (RemoteException e) {
@@ -115,6 +114,18 @@ public class ClientImpl extends AbstractClient implements Worker {
         return true;
     }
 
+    private void cleanup() {
+        for (UUID uid : this.taskStorage.keySet()) {
+            Path toDelete = this.taskStorage.remove(uid);
+            try {
+                Files.delete(toDelete);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
     @Override
     public boolean taskCompleted(UUID workid) throws RemoteException {
         Path toDelete = this.taskStorage.remove(workid);
@@ -126,14 +137,5 @@ public class ClientImpl extends AbstractClient implements Worker {
         return true;
     }
 
-    private void cleanup() {
-        for (UUID uid : this.taskStorage.keySet()) {
-            Path toDelete = this.taskStorage.remove(uid);
-            try {
-                Files.delete(toDelete);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+
 }
