@@ -25,8 +25,6 @@ public class CoordinatorImpl extends UnicastRemoteObject implements Coordinator 
     private final Map<String, Client> connectedClients;
     private Map<String, Timer> timers;
 
-    // todo poll and remove clients from connected clients map
-
     /**
      * @param coordName
      */
