@@ -1,5 +1,8 @@
 package client;
 
+/**
+ * An application that starts up 5 clients, to be used in a map reduce.
+ */
 public class BulkClientApp {
     public static void main(String[] args) {
         if (args.length != 2) {

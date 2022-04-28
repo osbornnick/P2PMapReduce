@@ -5,6 +5,11 @@ import com.healthmarketscience.rmiio.RemoteRetry;
 
 import java.io.IOException;
 
+/**
+ * A class used to combine two remote iterators, for use in reassigning map results to a lesser
+ *   amount of reduce workers.
+ * @param <T> The type of the iterator
+ */
 public class CombineRemoteIterator<T> implements RemoteIterator<T> {
 
     RemoteIterator<T> iterator1;

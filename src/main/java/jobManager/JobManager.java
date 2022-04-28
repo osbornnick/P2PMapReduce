@@ -1,6 +1,11 @@
 package jobManager;
 
+/**
+ * An interface for a JobManager. It is a job managers responsibility to oversee the entire map reduce operation
+ *   it assigns work to workers, reassigns failed work, and aggregates the final result
+ */
 public interface JobManager extends Runnable {
+
     /**
      * Start this JobManager.
      *
