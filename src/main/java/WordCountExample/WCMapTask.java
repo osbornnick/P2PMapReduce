@@ -5,6 +5,10 @@ import task.AbstractTask;
 import java.io.IOException;
 
 
+/**
+ * A sample implementation of a map operation for use in the word count example.
+ *   The implemented run (map) task takes each word and emits a 1.
+ */
 public class WCMapTask extends AbstractTask {
 
     public WCMapTask() {
